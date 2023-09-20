@@ -3,29 +3,6 @@ import _PhotosUI_SwiftUI
 import AVKit
 import WebKit
 
-//struct FullScreenHeightModifier: ViewModifier {
-//    @State private var height: CGFloat?
-//
-//    func body(content: Content) -> some View {
-//        content
-//            .frame(height: height)
-//            .background(
-//                GeometryReader { geometry in
-//                    Color.clear
-//                        .onAppear {
-//                            height = geometry.size.height
-//                        }
-//                }
-//            )
-//    }
-//}
-//
-//extension View {
-//    func fullScreenHeight() -> some View {
-//        self.modifier(FullScreenHeightModifier())
-//    }
-//}
-
 class ViewRouter: ObservableObject {
     @Published var path: [String] = [] {
         didSet {
@@ -46,7 +23,9 @@ class ViewRouter: ObservableObject {
     }
     @Published var topic: String = ""
     @Published var caption: String?
-    @Published var sources: [UserSources]?
+    @Published var bibleSources: [UserBibleSource]?
+    @Published var urlSources: [UserUrlSource]?
+
     @Published var selectedTopics: [String]?
     @Published var selectedVideos: [PhotosPickerItem] = [] {
         didSet {
@@ -60,11 +39,6 @@ class ViewRouter: ObservableObject {
         }
     }
     @Published var showVideoPicker: Bool = false
-
-    
-//    init() {
-//        self.showVideoPicker = false
-//    }
     
     @State var viewsList: [Views] = [
         Views(name: "ChatView", view: AnyView(ChatView())),
@@ -79,18 +53,6 @@ class ViewRouter: ObservableObject {
 
     func popToLast() { path.removeLast() }
 }
-
-//struct Movie: Transferable {
-//    let url: URL
-//    static var transferRepresentation: some TransferRepresentation {
-//        FileRepresentation(contentType: .mpeg4Movie) { movie in
-//            SentTransferredFile(movie.url)
-//            } importing: { received in
-//                let copy: URL = URL(fileURLWithPath: "<#...#>")
-//                try FileManager.default.copyItem(at: received.file, to: copy)
-//                return Self.init(url: copy) }
-//    }
-//}
 
 struct Views {
     var name: String
@@ -139,7 +101,7 @@ class ContentViewModel: ObservableObject {
             print("singleProfileUserData set to:", singleProfileUserData as Any)
         }
     }
-    @Published var singleProfileCurrentIndex: Int? = 0
+    @Published var singleProfileCurrentIndex: Int = 0
     @Published var singleProfileUserSet: Bool = false
     
     @Published var singleVideo: Video?
@@ -149,6 +111,8 @@ class ContentViewModel: ObservableObject {
 //        // Initialize isPlayingArray with the same number of elements as videos
 //        isPlayingArray = Array(repeating: false, count: videos.count)
 //    }
+    @Published var preferredVersion: String = "ASV"
+    @Published var bibleSource: BibleSource?
 
 }
 
@@ -177,34 +141,6 @@ class TopicsViewModel: ObservableObject {
     @Published var correctingFalseTeachingsData: TopicData? = nil
 }
 
-//struct WebView: UIViewRepresentable {
-//    let urlString: String
-//
-//    func makeUIView(context: Context) -> WKWebView {
-//        let webView = WKWebView()
-//        webView.navigationDelegate = context.coordinator
-//        return webView
-//    }
-//
-//    func updateUIView(_ uiView: WKWebView, context: Context) {
-//        if let url = URL(string: urlString) {
-//            let request = URLRequest(url: url)
-//            uiView.load(request)
-//        }
-//    }
-//
-//    func makeCoordinator() -> Coordinator {
-//        Coordinator(self)
-//    }
-//
-//    class Coordinator: NSObject, WKNavigationDelegate {
-//        var parent: WebView
-//
-//        init(_ parent: WebView) {
-//            self.parent = parent
-//        }
-//    }
-//}
 
 struct WebView: UIViewRepresentable {
     let htmlString: String
@@ -290,13 +226,14 @@ struct OpenVideoPlayerView: UIViewControllerRepresentable {
     }
 }
 
+public var screenHeight: CGFloat = UIScreen.main.bounds.height
+public var screenWidth: CGFloat = UIScreen.main.bounds.width
+
 struct ContentView: View {
     @EnvironmentObject var viewRouter: ViewRouter
     @StateObject private var viewModel = ContentViewModel()
     @EnvironmentObject var topicsViewModel: TopicsViewModel
 
-    @State var screenHeight: CGFloat = UIScreen.main.bounds.height
-    @State var screenWidth: CGFloat = UIScreen.main.bounds.width
 
     //@State private var showVideos: Bool = true
     //@State private var showWords: Bool = false
@@ -321,7 +258,14 @@ struct ContentView: View {
             print("videoSize:", videoSize)
         }
     }
-    @State var videoPositionY: CGFloat = UIScreen.main.bounds.height / 1.2
+    @State var videoPositionY: CGFloat = screenHeight / 1.2
+    @State var isReadyToPlay: Bool = false
+
+    @State private var previousTranslation: CGSize = .zero {
+        didSet {
+            print("previousTranslation:", previousTranslation)
+        }
+    }
 
     // Define a computed property to calculate the aspect ratio
     private var aspectRatio: CGFloat {
@@ -365,14 +309,14 @@ struct ContentView: View {
 //                    <p><a href="https://giphy.com/gifs/europeanspaceagency-space-esa-european-agency-fl41FRYRvhzOgiyDkX">via GIPHY</a></p>
 //                """)
                 //.frame(width: 480, height: 480)
-                if viewModel.videos.isEmpty {
+                if viewModel.videos.isEmpty || viewModel.currentIndex >= viewModel.videos.count{
                     Image("firstFrame")
                         .resizable()
                         //.scaledToFill()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .edgesIgnoringSafeArea(.all)
                 }
-                if viewModel.currentIndex >= 0 && viewModel.videos.count != 0 {
+                if viewModel.currentIndex < viewModel.videos.count {
                     if viewModel.videos[viewModel.currentIndex].isVideoReliable.reliability == "false" {
                         Image("earth-core")
                             .resizable()
@@ -405,45 +349,49 @@ struct ContentView: View {
                        //Spacer()
                         
                         Button(action: {
-                            viewRouter.popToView("ChatView", atIndex: 0)
+                            viewRouter.popToView("BibleView", atIndex: viewRouter.path.count)
                         }) {
-                            Image(systemName: "bubble.right")
+                            Image(systemName: "a.book.closed.fill")
                                 .font(.system(size: 35))
-                                .foregroundColor(.white)
+                                .foregroundColor(.purple)
+                                //.background(Color.secondary)
                         }
+
                         //Spacer()
                         
                         Button(action:  {
-                            viewRouter.popToView("UploadView", atIndex: 0)
+                            viewRouter.popToView("UploadView", atIndex: viewRouter.path.count)
                         }) {
                             Image(systemName: "plus.circle")
                                 .font(.system(size: 35))
-                                .foregroundColor(.white)
+                                .foregroundColor(.pink)
                        }
                         //Spacer()
                         
                         Button(action:  {
-                            viewRouter.popToView("WhoIsLiveView", atIndex: 0)
+                            viewRouter.popToView("WhoIsLiveView", atIndex: viewRouter.path.count)
                         }) {
                             Text("Live")
                                 .font(.system(size: 25))
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
 
-                                .foregroundColor(.white)
+                                .foregroundColor(Color.black)
+                                .background(Color.accentColor)
+                                .cornerRadius(12)
                                 .background(
                                     RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.white, lineWidth: 2) // Border
+                                        .stroke(Color.gray, lineWidth: 5) // Border
                                 )
                        }
                         //Spacer()
                         
                         Button(action: {
-                            viewRouter.popToView("SearchView", atIndex: 0)
+                            viewRouter.popToView("SearchView", atIndex: viewRouter.path.count)
                         }) {
                             Image(systemName: "magnifyingglass")
                                 .font(.system(size: 35))
-                                .foregroundColor(.white)
+                                .foregroundColor(Color.accentColor)
                             }
                         //Spacer()
                         
@@ -451,10 +399,10 @@ struct ContentView: View {
                             if UserDefaults.userProfile != nil && UserDefaults.userProfile?._id != "" {
                                 if let userId = UserDefaults.userProfile?._id {
                                     viewModel.singleProfileRef = userId
-                                    viewRouter.popToView("ProfileView", atIndex: 0)
+                                    viewRouter.popToView("ProfileView", atIndex: viewRouter.path.count)
                                 }
                             } else {
-                                viewRouter.popToView("SignInView", atIndex: 0)
+                                viewRouter.popToView("SignInView", atIndex: viewRouter.path.count)
                             }
                         }) {
                             if let userImage = UserDefaults.image?.url {
@@ -531,81 +479,100 @@ struct ContentView: View {
             .gesture(
                 DragGesture(minimumDistance: 1)
                     .onChanged { gesture in
-                        print("gesture:", gesture.translation.height)
-                        print("screen height:", UIScreen.main.bounds.height)
-
-                        // Adjust the scale factor based on gesture translation
-                        let scaleDelta = Double(gesture.translation.height) / 2000
-                        let newVideoSize = videoSize + scaleDelta
-                        
-                        // Clamp the newVideoSize between 0.001 and 1
-                        videoSize = min(max(newVideoSize, 0.001), 1.0)
-                        
-                        if gesture.translation.height > 0 {
-                            let positionDelta = gesture.translation.height / 10
-                            let newVideoPositionY = videoPositionY + positionDelta
-                            
-                            videoPositionY = min(max(newVideoPositionY, UIScreen.main.bounds.height / 1.2), UIScreen.main.bounds.height / 0.5)
-                        }
-                    }
+                         print("gesture:", gesture.translation.height)
+                         
+                         // Calculate the change in translation since the last update
+                         let translationChange = CGSize(
+                             width: gesture.translation.width - previousTranslation.width,
+                             height: gesture.translation.height - previousTranslation.height
+                         )
+                         
+                         // Adjust the scale factor based on gesture translation
+                         let scaleDelta = Double(translationChange.height) / 300
+                         let newVideoSize = videoSize + scaleDelta
+                         
+                         // Clamp the newVideoSize between 0.001 and 1
+                         videoSize = min(max(newVideoSize, 0.001), 1.0)
+                         
+                         if gesture.translation.height > 0 && videoPositionY >= screenHeight / 1.2 {
+                             let positionDelta = translationChange.height / 1
+                             let newVideoPositionY = videoPositionY + positionDelta
+                             
+                             videoPositionY = min(max(newVideoPositionY, UIScreen.main.bounds.height / 1.2), UIScreen.main.bounds.height / 0.5)
+                         } else {
+                             videoPositionY = screenHeight / 1.2
+                         }
+                         
+                         // Update the previous translation
+                         previousTranslation = gesture.translation
+                     }
+                     .onEnded { _ in
+                         // Reset the previous translation when the drag ends
+                         previousTranslation = .zero
+                     }
                     .onEnded { endGesture in
                         if endGesture.translation.height < -40 || videoSize <= 0.5 {
                             if viewModel.currentIndex != viewModel.videos.count - 1 {
-                                Timer.scheduledTimer(withTimeInterval: 0.001, repeats: true) { timer in
-                                    withAnimation(Animation.linear(duration: 2.0)) {
-                                        videoSize = min(max(videoSize - 1.0, 0.001), 1.0)
-                                    }
-                                    if videoSize <= 0.001 {
-                                        timer.invalidate()
-                                        DispatchQueue.main.async {
-                                            print("currentIndex forward")
-                                            viewModel.isPlayingArray[viewModel.currentIndex] = false
+                                if viewModel.videos.count != 0 {
+                                    DispatchQueue.main.async {
+                                        print("currentIndex forward")
+                                        isReadyToPlay = false
+
+                                        viewModel.isPlayingArray[viewModel.currentIndex] = false
+                                        
+                                        if viewModel.currentIndex < viewModel.videos.count - 1 {
                                             viewModel.isPlayingArray[viewModel.currentIndex + 1] = true
                                             viewModel.currentIndex += 1
-                                            
                                         }
-                                    
+                                        
+                                        Timer.scheduledTimer(withTimeInterval: 0.001, repeats: true) { timer in
+                                            withAnimation(Animation.linear(duration: 2.0)) {
+                                                videoSize = min(max(videoSize - 1.0, 0.001), 1.0)
+                                            }
+                                            if videoSize <= 0.001 {
+                                                timer.invalidate()
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
-                        if endGesture.translation.height >= 40 || videoPositionY >= UIScreen.main.bounds.height / 0.6 {
+                        if endGesture.translation.height >= 40 || videoPositionY >= screenHeight / 0.6 {
                             if viewModel.currentIndex != 0 {
                                 DispatchQueue.main.async {
-
-                                    Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
-                                    withAnimation(Animation.linear(duration: 4.0)) {
-                                        videoPositionY += CGFloat(0.1)
-                                        
-                                    }
-                                    if videoPositionY <= screenHeight / 0.6 {
-                                        timer.invalidate()
-                                        videoPositionY = screenHeight / 1.2
-
-                                    }
-                                }
                                     print("currentIndex back")
+                                    isReadyToPlay = false
+                                    
                                     viewModel.isPlayingArray[viewModel.currentIndex] = false
                                     viewModel.isPlayingArray[viewModel.currentIndex - 1] = true
-                                    viewModel.currentIndex -= 1
+                                    if viewModel.currentIndex < viewModel.videos.count {
+                                        viewModel.currentIndex -= 1
+                                    }
+                                    
+                                    Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
+                                        withAnimation(Animation.linear(duration: 4.0)) {
+                                            videoPositionY += CGFloat(0.1)
+                                            
+                                        }
+                                        if videoPositionY <= screenHeight / 0.6 {
+                                            timer.invalidate()
+                                            videoPositionY = screenHeight / 1.2
+                                        }
+                                    
+                                    }
                                 }
                             } else {
+                                refreshVideos()
                                 videoPositionY = screenHeight / 1.2
                                 
                             }
                         }
                         if endGesture.translation.height > 0 && endGesture.translation.height < 40 {
-                            Timer.scheduledTimer(withTimeInterval: 0.001, repeats: true) { timer in
-                                withAnimation(Animation.linear(duration: 4.0)) {
-                                    videoPositionY += 0.001
-                                    
-                                }
-                                if videoPositionY < screenHeight / 0.6 {
-                                    timer.invalidate()
+
                                     videoPositionY = screenHeight / 1.2
 
-                                }
-                            }
+                                
+                            
                         }
                         if endGesture.translation.height < 0 && endGesture.translation.height > -40 {
                             videoSize = 1.0
@@ -622,7 +589,7 @@ struct ContentView: View {
                     case "WhoIsLiveView": return AnyView(WhoIsLiveView().environmentObject(viewRouter))
                     case "SearchView": return AnyView(SearchView().environmentObject(viewRouter).environmentObject(topicsViewModel))
                     case "ProfileView": return
-                    AnyView(ProfileView().environmentObject(viewRouter).environmentObject(viewModel))
+                        AnyView(ProfileView().environmentObject(viewRouter).environmentObject(viewModel))
                     case "SettingsView": return AnyView(SettingsView().environmentObject(viewRouter))
                     case "TopicView": return AnyView(TopicView().environmentObject(viewRouter).environmentObject(topicsViewModel))
                     case "SingleVideoView": return AnyView(SingleVideoView().environmentObject(viewRouter).environmentObject(viewModel))
@@ -632,6 +599,8 @@ struct ContentView: View {
                     case "PostVideoView": return AnyView(PostVideo().environmentObject(viewRouter).environmentObject(viewModel))
                     case "PreviewView": return AnyView(PreviewView().environmentObject(viewRouter).environmentObject(viewModel))
                     case "SignInView": return AnyView(SignInView().environmentObject(viewRouter))
+                    case "BibleView": return AnyView(BibleView().environmentObject(viewRouter).environmentObject(viewModel))
+
                     default: return AnyView(EmptyView())
                 }
             }
@@ -645,9 +614,11 @@ struct ContentView: View {
                     if value.translation.width < 0 {
                         // Leftward swipe detected
                         
-                        DispatchQueue.main.async {
-                            viewModel.singleProfileRef = viewModel.videos[viewModel.currentIndex].postedBy._ref
-                            viewRouter.popToView("Pr0fileView", atIndex: viewRouter.path.count)
+                        if viewModel.currentIndex < viewModel.videos.count {
+                            DispatchQueue.main.async {
+                                viewModel.singleProfileRef = viewModel.videos[viewModel.currentIndex].postedBy._ref
+                                viewRouter.popToView("ProfileView", atIndex: viewRouter.path.count)
+                            }
                         }
                         
                     } else if value.translation.width > 0 {
@@ -672,7 +643,7 @@ struct ContentView: View {
                         get: {
                              let currentIndex = viewModel.currentIndex
                             if currentIndex >= 0 && currentIndex < viewModel.isPlayingArray.count {
-                                return currentIndex == index && viewModel.isPlayingArray[currentIndex] == true
+                                return currentIndex == index && viewModel.isPlayingArray[currentIndex] == true && isReadyToPlay
                             } else {
                                 return false // Handle the case where currentIndex is nil or out of range
                             }
@@ -704,6 +675,7 @@ struct ContentView: View {
                 .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height / 1.2)
                 .onAppear{
                     videoPositionY = screenHeight / 1.2
+                    videoSize = 0.01
                     Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) {_ in
                         Timer.scheduledTimer(withTimeInterval: 0.01, repeats: true) { timer in
                             withAnimation(Animation.linear(duration: 2.0)) {
@@ -726,11 +698,14 @@ struct ContentView: View {
                             if videoSize >= 1.0 {
                                 
                                 timer2.invalidate()
+                                isReadyToPlay = true
                             }
                         }
                     }
                 }
                 .onChange(of: viewModel.currentIndex) { _ in
+                    isReadyToPlay = false
+                    videoSize = 0.01
                     Timer.scheduledTimer(withTimeInterval: 0.0, repeats: false) {_ in
                         Timer.scheduledTimer(withTimeInterval: 0.01, repeats: true) { timer in
                             withAnimation(Animation.linear(duration: 2.0)) {
@@ -753,6 +728,7 @@ struct ContentView: View {
                             if videoSize >= 1.0 {
                                 
                                 timer2.invalidate()
+                                isReadyToPlay = true
                             }
                         }
                     }
@@ -799,9 +775,10 @@ struct ContentView: View {
 
     private func refreshVideos() {
         refreshed = true
+        isReadyToPlay = false
         DispatchQueue.main.async {
             viewModel.videos = []
-
+            viewModel.currentIndex = 0
         }
         videoSize = 0.01
 

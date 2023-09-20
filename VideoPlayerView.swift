@@ -1,4 +1,5 @@
 import SwiftUI
+import Photos
 import AVKit
 import Combine
 
@@ -98,6 +99,14 @@ struct VideoPlayerView: View {
     
     @Binding var videoSize: Double
     @Binding var videoPositionY: CGFloat
+    
+    @State var showDownloadSuccess: Bool = false
+    @State var showDownloadFailure: Bool = false
+    
+    @State var showReport: Bool = false
+    @State var reportReasons: [String] = ["false teaching", ""]
+    
+    @State var reportText: String = ""
 
 
     init(video: Video, user: IUser, isPlaying: Binding<Bool>, currentLoopControl: Binding<String>, isMuted: Binding<Bool>, showHeader: Binding<Bool>, currentIndex: Binding<Int>, videoSize: Binding<Double>, videoPositionY: Binding<CGFloat>) {
@@ -142,9 +151,14 @@ struct VideoPlayerView: View {
                                 if let sources = video.isVideoReliable.proof?.sources {
                                     ForEach(sources, id: \.self) { source in
                                         Button(action: {
-                                            fetchAndOpenURL(url: source.url)
+                                            DispatchQueue.main.async {
+                                                viewRouter.popToView("BibleView", atIndex: viewRouter.path.count)
+                                                viewModel.bibleSource = BibleSource(book: source.book, chapter: source.chapter)
+                                             
+                                            }
+                                            //fetchAndOpenURL(url: source.url)
                                         }) {
-                                            Text("\(source.title)")
+                                            Text("\(source.book) \(source.chapter)")
                                                 .font(.system(size: 15))
                                                 .foregroundColor(.blue)
                                         }
@@ -284,6 +298,9 @@ struct VideoPlayerView: View {
                         }
                         if showTranscription {
                             showTranscription.toggle()
+                        }
+                        if showReport {
+                            showReport.toggle()
                         }
                         if showInfo {
                             showInfo.toggle()
@@ -501,7 +518,6 @@ struct VideoPlayerView: View {
             print("Error: Invalid URL")
         }
     }
-
     
     @ViewBuilder
     private func videoContent() -> some View {
@@ -532,66 +548,152 @@ struct VideoPlayerView: View {
         }
         .overlay(
             VStack {
+                if showReport{
+                    Spacer()
+                }
                 HStack {
                     if showActions {
                         VStack(spacing: 5) {
                             Button(action:{
-                                
+                                if let videoUrl = video.videoUrl {
+                                    downloadVideo(videoURL: videoUrl)
+                                    showActions.toggle()
+                                }
                             }) {
                                 Text("Download Video")
                                     .font(.system(size: 15))
                                     .foregroundColor(.white)
                             }
                             Button(action:{
-                                
-                            }) {
-                                Text("Suggest a review")
-                                    .font(.system(size: 15))
-                                    .foregroundColor(.white)
-
-                            }
-                            Button(action:{
-                                
+                                showReport.toggle()
+                                showActions.toggle()
                             }) {
                                 Text("Report")
                                     .font(.system(size: 15))
                                     .foregroundColor(.white)
-
                             }
                         }
                         .padding(5)
                         .background(Color.black)
                         .border(Color.white, width: 2)
                     }
+                    if showDownloadSuccess {
+                        Text("Saved to Photos")
+                            .font(.system(size: 15))
+                            .foregroundColor(.white)
+                            .padding(5)
+                            .background(Color.black)
+                            .border(Color.white, width: 2)
+                            .onAppear{
+                                Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) {timer in
+                                    showDownloadSuccess = false
+                                    timer.invalidate()
+                                }
+                            }
+                    }
+                    if showDownloadFailure {
+                        Text("Error Saving to Photos")
+                            .font(.system(size: 15))
+                            .foregroundColor(.white)
+                            .padding(5)
+                            .background(Color.black)
+                            .border(Color.white, width: 2)
+                            .onAppear{
+                                Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) {timer in
+                                    showDownloadFailure = false
+                                    timer.invalidate()
+                                }
+                            }
+                    }
                     Spacer()
                     
+                    if showReport {
+                        VStack{
+                            
+                            TextEditor(text: $reportText)
+                                .font(.system(size: 15))
+                                .foregroundColor(.black)
+                                .padding(5)
+                                .lineLimit(nil) // Allow unlimited lines
+                                .multilineTextAlignment(.leading)
+                                .border(Color.clear, width: 2)
+                                .highPriorityGesture(DragGesture())
+                            Spacer()
+
+                            HStack{
+                                Button(action: {
+                                    reportText = ""
+                                    showReport = false
+                                }) {
+                                    Text("Cancel")
+                                        .foregroundColor(.black)
+                                        .padding(5)
+                                        .background(Color.white)
+                                        .border(Color.gray, width: 2)
+                                    
+                                }
+                                .padding(5)
+                                Button(action: {
+                                    if !reportText.isEmpty {
+                                        report()
+                                    }
+                                }) {
+                                    Text("Report")
+                                        .foregroundColor(.black)
+                                        .padding(5)
+                                        .background(Color.red)
+                                        .border(Color.gray, width: 2)
+                                    
+                                }
+                                .padding(5)
+                            }
+                        }
+                        .frame(width: screenWidth / 1.5, height: screenHeight / 3)
+                        .background(Color.white)
+                        .border(Color.white, width: 2)
+                    }
+                    
                     if showUserSources {
-                        if let sources = video.userSources {
-                            VStack {
-                                Text("\(user.userName)'s references")
-                                    .font(.system(size: 15))
-                                    .foregroundColor(.white)
-                                    .padding(.bottom, -5)
-                                ScrollView(.vertical) {
-                                    VStack {
-                                        ForEach(sources, id: \.self) { source in
+                        VStack(spacing: 10) {
+                            Text("\(user.userName)'s references")
+                                .font(.system(size: 15))
+                                .foregroundColor(.white)
+                                .padding(.bottom, -5)
+                            ScrollView(.vertical) {
+                                VStack{
+                                    if let bibleSources = video.bibleSources {
+                                        ForEach(bibleSources, id: \.self) { source in
+                                            Button(action: {
+                                                DispatchQueue.main.async{
+                                                    viewModel.bibleSource = BibleSource(book: source.book, chapter: source.chapter)
+                                                    viewRouter.popToView("BibleView", atIndex: viewRouter.path.count)
+                                                }
+                                            }) {
+                                                Text("\(source.book) \(source.chapter)")
+                                                    .foregroundColor(Color.purple)
+                                            }
+                                            .padding(.bottom, 2)
+                                        }
+                                    }
+                                    if let urlSources = video.urlSources {
+                                        ForEach(urlSources, id: \.self) { source in
                                             Button(action: {
                                                 goToLink(urlString: source.url)
                                             }) {
                                                 Text(source.title)
                                                     .foregroundColor(Color.blue)
                                             }
+                                            .padding(.bottom, 2)
                                         }
                                     }
                                 }
-                                .highPriorityGesture(DragGesture())
                             }
-                            .padding(5)
-                            .border(Color.white, width: 2)
-                            .background(Color.black)
-                            .frame(width: UIScreen.main.bounds.width / 2, height: UIScreen.main.bounds.height / 8)
-                            
+                            .highPriorityGesture(DragGesture())
                         }
+                        .padding(5)
+                        .border(Color.white, width: 2)
+                        .background(Color.black)
+                        .frame(width: UIScreen.main.bounds.width / 1.2, height: UIScreen.main.bounds.height / 6)
                     }
                     Spacer()
                     
@@ -661,6 +763,32 @@ struct VideoPlayerView: View {
 
                                 }) {
                                     Text("Pause on end")
+                                        .font(.system(size: 15))
+                                        .padding(5)
+                                        .foregroundColor(.white)
+                                        .frame(width: 110)
+                                        .background(Color.black)
+                                        .border(Color.white, width: 1)
+                                }
+                            case "pauseOnEnd":
+                                Button(action: {
+                                    currentLoopControl = "loop"
+                                    showLoopControls.toggle()
+                                }) {
+                                    Text("Loop")
+                                        .font(.system(size: 15))
+                                        .padding(5)
+                                        .foregroundColor(.white)
+                                        .frame(width: 50)
+                                        .background(Color.black)
+                                        .border(Color.white, width: 1)
+                                }
+                                Button(action: {
+                                    currentLoopControl = "swipeOnEnd"
+                                    showLoopControls.toggle()
+
+                                }) {
+                                    Text("Swipe on end")
                                         .font(.system(size: 15))
                                         .padding(5)
                                         .foregroundColor(.white)
@@ -779,6 +907,7 @@ struct VideoPlayerView: View {
                                 if showInfo {
                                     showInfo.toggle()
                                 }
+                                
                                 showClosedCaptionOptions = false
                                 showTranscription.toggle()
                             }) {
@@ -995,6 +1124,143 @@ struct VideoPlayerView: View {
         let remainingSeconds = Int(seconds) % 60
         return String(format: "%02d:%02d", minutes, remainingSeconds)
     }
+    
+    func downloadVideo(videoURL: URL) {
+        // Create a temporary directory URL within your app's sandboxed directory
+        guard let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            print("Unable to access app's sandboxed directory")
+            return
+        }
+        
+        let tempDirectoryURL = documentsDirectory.appendingPathComponent("temp")
+        
+        // Check if the temporary file exists and delete it if it does
+        if FileManager.default.fileExists(atPath: tempDirectoryURL.path) {
+            do {
+                try FileManager.default.removeItem(at: tempDirectoryURL)
+                print("Existing temporary directory deleted")
+            } catch {
+                print("Error deleting existing temporary directory: \(error.localizedDescription)")
+                return
+            }
+        }
+        
+        // Create the temporary directory
+        do {
+            try FileManager.default.createDirectory(at: tempDirectoryURL, withIntermediateDirectories: true, attributes: nil)
+        } catch {
+            print("Error creating temporary directory: \(error.localizedDescription)")
+            return
+        }
+        
+        // Create a destination URL within the temporary directory
+        let destinationURL = tempDirectoryURL.appendingPathComponent(videoURL.lastPathComponent)
+        print("destinationURL:", destinationURL)
+        
+        URLSession.shared.downloadTask(with: videoURL) { (tempURL, response, error) in
+            if let error = error {
+                print("Error downloading video: \(error.localizedDescription)")
+                return
+            }
+
+            guard let tempURL = tempURL else {
+                print("No temporary URL received while downloading video")
+                return
+            }
+
+            do {
+                // Copy the downloaded video to the temporary directory
+                try FileManager.default.copyItem(at: tempURL, to: destinationURL)
+
+                // Check if the video can be saved to the photo library
+                PHPhotoLibrary.requestAuthorization { status in
+                    if status == .authorized {
+                        // Save the video to the photo library
+                        PHPhotoLibrary.shared().performChanges {
+                            let creationRequest = PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: destinationURL)
+                            creationRequest?.placeholderForCreatedAsset
+                        } completionHandler: { (success, error) in
+                            if success {
+                                print("Video saved to the photo library")
+                                showDownloadSuccess = true
+                                // Delete the temporary file after it's saved to the photo library
+                                do {
+                                    try FileManager.default.removeItem(at: destinationURL)
+                                    print("Temporary file deleted")
+                                } catch {
+                                    print("Error deleting temporary file: \(error.localizedDescription)")
+                                }
+                            } else if let error = error {
+                                print("Error saving video to the photo library: \(error.localizedDescription)")
+                                showDownloadFailure = true
+                            }
+                        }
+                    } else {
+                        print("Permission to access the photo library denied")
+                    }
+                }
+            } catch {
+                print("Error copying video to temporary directory: \(error.localizedDescription)")
+            }
+        }.resume()
+    }
+    
+    func report() {
+        guard let serverIpUrlString = ProcessInfo.processInfo.environment["serverIpUrl"],
+              let createVideoEndpoint = URL(string: serverIpUrlString)?.appendingPathComponent("/api/createReport") else {
+            print("Error: Invalid server URL or endpoint")
+            return
+        }
+        
+        var request = URLRequest(url: createVideoEndpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        if let videoId = video._id {
+            let report: Report = Report(postedBy: UserDefaults.userProfile?._id ?? "unknown", videoId: videoId, text: reportText)
+                        
+            do {
+                // Encode the Report instance as JSON data
+                let jsonEncoder = JSONEncoder()
+                let jsonData = try jsonEncoder.encode(report)
+                request.httpBody = jsonData
+                
+                // Create a custom session configuration
+                let sessionConfig = URLSessionConfiguration.default
+                sessionConfig.timeoutIntervalForRequest = 600 // Set the timeout interval in seconds
+                
+                // Create a URLSession with the custom configuration
+                let session = URLSession(configuration: sessionConfig)
+                
+                // Use the custom session for data task
+                session.dataTask(with: request) { data, response, error in
+                    if let error = error {
+                        print("Error: \(error.localizedDescription)")
+                        //completion(.failure(error))
+                        return
+                    }
+                    
+                    if let httpResponse = response as? HTTPURLResponse {
+                        if (200...299).contains(httpResponse.statusCode) {
+                            print("report created")
+                            showReport = false
+                            //completion(.success(()))
+                            
+                        } else {
+                            print("Error: HTTP status code \(httpResponse.statusCode)")
+                            showReport = false
+
+                            //completion(.failure(NSError(domain: "HTTP status code \(httpResponse.statusCode)", code: 0, userInfo: nil)))
+                        }
+                    }
+                }.resume()
+            } catch {
+                print("Error encoding report as JSON: \(error)")
+                // Handle the error here
+            }
+        }
+    }
+
     
 //    @ViewBuilder
 //    private func transcriptionBoxContent() -> some View {
@@ -1251,7 +1517,6 @@ struct VideoPlayerView: View {
 
                         }
                         
-
                     } else if self.parent.currentLoopControl == "swipeOnEnd"{
                         
                         //player.pause()

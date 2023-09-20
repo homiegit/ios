@@ -52,9 +52,9 @@ struct UploadView: View {
                 VStack {
                     Button(action: {
                         if UserDefaults.userProfile != nil && UserDefaults.userProfile?._id != "" {
-                            viewRouter.popToView("LiveCaptureVideoView", atIndex: 1)
+                            viewRouter.popToView("LiveCaptureVideoView", atIndex: viewRouter.path.count)
                         } else {
-                            viewRouter.popToView("SignInView", atIndex: 1)
+                            viewRouter.popToView("SignInView", atIndex: viewRouter.path.count)
 
                         }
                     }) {
@@ -68,9 +68,9 @@ struct UploadView: View {
 
                         Button(action: {
                             if UserDefaults.userProfile != nil && UserDefaults.userProfile?._id != "" {
-                                viewRouter.popToView("CaptureVideoView", atIndex: 1)
+                                viewRouter.popToView("CaptureVideoView", atIndex: viewRouter.path.count)
                             } else {
-                                viewRouter.popToView("SignInView", atIndex: 1)
+                                viewRouter.popToView("SignInView", atIndex: viewRouter.path.count)
 
                             }
                         }) {
@@ -87,7 +87,7 @@ struct UploadView: View {
                                 
                                 viewRouter.showVideoPicker = true
                             } else {
-                                viewRouter.popToView("SignInView", atIndex: 1)
+                                viewRouter.popToView("SignInView", atIndex: viewRouter.path.count)
 
                             }
                         }) {
@@ -124,7 +124,7 @@ struct UploadView: View {
                                         
                                         DispatchQueue.main.async {
                                             viewRouter.selectedVideoURLs = updatedURLs
-                                            viewRouter.popToView("EditRecordedClipsView", atIndex: 1)
+                                            viewRouter.popToView("EditRecordedClipsView", atIndex: viewRouter.path.count)
                                             isVideoLoading = false
                                             isDoneAppending = true
                                         }
@@ -139,10 +139,10 @@ struct UploadView: View {
 
 //                        Button(action: {
 //                            if UserDefaults.userProfile != nil && UserDefaults.userProfile?._id != "" {
-//                                viewRouter.popToView("ComposeWord", atIndex: 1)
+//                                viewRouter.popToView("ComposeWord", atIndex: viewRouter.path.count)
 //                            } else {
 //
-//                                viewRouter.popToView("SignInView", atIndex: 1)
+//                                viewRouter.popToView("SignInView", atIndex: viewRouter.path.count)
 //                            }
 //
 //                        }) {

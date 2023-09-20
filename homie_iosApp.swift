@@ -9,7 +9,6 @@ import SwiftUI
 
 @main
 struct homie_iosApp: App {
-    let persistenceController = PersistenceController.shared
     @StateObject var viewRouter = ViewRouter()
     @StateObject var topicsViewModel = TopicsViewModel()
     var body: some Scene {
@@ -143,10 +142,11 @@ struct homie_iosApp: App {
             )
                 .environmentObject(viewRouter)
                 .environmentObject(topicsViewModel)
-                .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .alert(isPresented: $viewRouter.isVideoSaved) {
                     Alert(title: Text("Your video has been posted!"), message: nil, dismissButton: .default(Text("OK")))
                 }
         }
     }
 }
+
+

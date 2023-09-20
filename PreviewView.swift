@@ -2,6 +2,8 @@ import SwiftUI
 
 struct PreviewView: View {
     @EnvironmentObject var viewRouter: ViewRouter
+    @EnvironmentObject var viewModel: ContentViewModel
+
     @State private var videoAsset: VideoAsset?
     @State private var uploadedAsset: UploadedAsset?
 
@@ -11,7 +13,9 @@ struct PreviewView: View {
     @State var isMuted = false
     
     @Binding private var caption: String?
-    @Binding private var sources: [UserSources]?
+    @Binding private var urlSources: [UserUrlSource]?
+    @Binding private var bibleSources: [UserBibleSource]?
+
     @Binding private var selectedTopics: [String]?
     
     @State private var transcriptionResults: String? = ""
@@ -26,12 +30,12 @@ struct PreviewView: View {
     @State private var isPostVideoInProgress: Bool = false
     @Environment(\.presentationMode) var presentationMode: Binding<PresentationMode>
     @Binding private var secondsWatched: Int
-    public init(caption: Binding<String?> = .constant(nil),
-                sources: Binding<[UserSources]?> = .constant(nil),
+    public init(caption: Binding<String?> = .constant(nil), urlSources: Binding<[UserUrlSource]?> = .constant(nil), bibleSources: Binding<[UserBibleSource]?> = .constant(nil),
                 selectedTopics: Binding<[String]?> = .constant(nil),
                 secondsWatched: Binding<Int> = .constant(0)) {
         self._caption = caption
-        self._sources = sources
+        self._urlSources = urlSources
+        self._bibleSources = bibleSources
         self._selectedTopics = selectedTopics
         self._secondsWatched = secondsWatched
     }
@@ -155,7 +159,8 @@ struct PreviewView: View {
                                                 viewRouter.concatenatedURL = URL(string: "")
                                                 viewRouter.recordedURLs = []
                                                 viewRouter.caption = ""
-                                                viewRouter.sources = []
+                                                viewRouter.urlSources = []
+                                                viewRouter.bibleSources = []
                                                 viewRouter.selectedTopics = []
                                                 
                                                 viewRouter.isVideoSaved = true
@@ -332,7 +337,8 @@ struct PreviewView: View {
                 isFeatured: false,
                 videoUrl: videoAssetUrl!,
                 caption: viewRouter.caption,
-                userSources: viewRouter.sources,
+                urlSources: viewRouter.urlSources,
+                bibleSources: viewRouter.bibleSources,
                 selectedTopics: viewRouter.selectedTopics,
                 typeOfContent: [""],
                 transcriptionResults: transcriptionResults,

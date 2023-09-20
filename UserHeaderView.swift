@@ -25,14 +25,12 @@ struct UserHeaderView: View {
         HStack {
             Spacer()
             Button(action: {
-                viewModel.singleProfileRef = user._id
-                if viewRouter.path.contains("SearchView") {
-                    viewRouter.popToView("ProfileView", atIndex: 1)
-                }
-                if viewRouter.path.contains("TopicView") {
-                    viewRouter.popToView("ProfileView", atIndex: 2)
-                } else {
-                    viewRouter.popToView("ProfileView", atIndex: 0)
+                DispatchQueue.main.async{
+                    viewModel.singleProfileRef = user._id
+                    if viewRouter.path.contains("SearchView") {
+                        viewRouter.popToView("ProfileView", atIndex: viewRouter.path.count)
+                    }
+                    viewRouter.popToView("ProfileView", atIndex: viewRouter.path.count)
                 }
             }) {
                 Text(user.userName)
@@ -70,7 +68,7 @@ struct UserHeaderView: View {
                     }
                     Spacer(minLength: (UIScreen.main.bounds.width / 2) - CGFloat(user.userName.count))
                     //Spacer(minLength: CGFloat(user.userName.count) / 4)
-                    if video.userSources != nil {
+                    if (video.urlSources?.count != 0 || video.bibleSources?.count != 0) && (video.urlSources?.count != nil || video.bibleSources?.count != nil) {
                         Spacer(minLength: 0)
                         Button(action:{
                             if showInfo {

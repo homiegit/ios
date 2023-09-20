@@ -19,19 +19,31 @@ struct CheckBox: View {
 
 struct ComposeWord: View {
     @EnvironmentObject var viewRouter: ViewRouter
+    @EnvironmentObject var viewModel: ContentViewModel
+
     @State private var isWordReliable: (reliability: String, proof: [String]) = (reliability: "pending", proof: [])
     @State private var isUserReliable: (reliability: String, proof: [String]) = (reliability: "pending", proof: [])
     @State private var showTopics = false
     @State private var text = ""
     
+    @State private var book: String = ""
+    @State private var chapter: String = ""
     @State private var sourceUrl: String = ""
     @State private var title: String = ""
+    
     @State private var invalidLink: String?
+    @State private var invalidLinks: [String] = []
+
     @State private var showInvalidLinkAlert: Bool = false
 
-    @State private var sources: [UserSources] = [] {
+    @State private var bibleSources: [UserBibleSource] = [] {
         didSet {
-            print("sources set to:", sources as Any)
+            print("bibleSources set to:", bibleSources as Any)
+        }
+    }
+    @State private var urlSources: [UserUrlSource] = [] {
+        didSet {
+            print("urlSources set to:", urlSources as Any)
         }
     }
     //@State private var urls: [String] = []
@@ -72,20 +84,20 @@ struct ComposeWord: View {
                 //                    .padding(.vertical)
                 
                 HStack {
-                    TextField("Paste URL", text: $sourceUrl)
+                    TextField("Book", text: $book)
                         .foregroundColor(.white)
                         .background(Color.blue)
                         .frame(width: UIScreen.main.bounds.width / 2, height: UIScreen.main.bounds.height / 15)
                     
                     Spacer()
-                    TextField("Title", text: $title)
+                    TextField("Chapter", text: $chapter)
                         .foregroundColor(.white)
                         .background(Color.blue)
                         .frame(width: UIScreen.main.bounds.width / 4, height: UIScreen.main.bounds.height / 10)
                         .multilineTextAlignment(.center)
                     
                     Button(action: {
-                        addUrl()
+                        addBibleSource()
                     }) {
                         Image(systemName: "plus.circle")
                             .foregroundColor(.blue)
@@ -93,15 +105,15 @@ struct ComposeWord: View {
                     .padding(.leading, 8)
                 }
                 VStack {
-                    if let invalidText = invalidLink, !invalidText.isEmpty {
-                        Text("\(invalidText) is invalid")
-                            .font(.system(size: 12))
-                            .foregroundColor(Color.red)
-                    }
-                
+//                    if let invalidText = invalidLink, !invalidText.isEmpty {
+//                        Text("\(invalidText) is invalid")
+//                            .font(.system(size: 12))
+//                            .foregroundColor(Color.red)
+//                    }
+//                
 
                     
-                    ForEach(sources, id: \.self) { source in
+                    ForEach(urlSources, id: \.self) { source in
                         HStack {
                             Button(action: {
                                 testLink(source.url) { result in
@@ -120,13 +132,34 @@ struct ComposeWord: View {
                                         }
                                 }
                             }) {
-                                Text(source.url)
+                                Text("\(source.title)")
                                     .foregroundColor(Color.blue)
                                     .font(.system(size: 12))
                             }
 
                              Button(action: {
                                  removeUrl(deletedSource: source)
+                             }) {
+                                 Image(systemName: "delete.left")
+                                     .foregroundColor(.red)
+                             }
+                         }
+                    }
+                    ForEach(bibleSources, id: \.self) { source in
+                        HStack {
+                            Button(action: {
+                                DispatchQueue.main.async {
+                                    viewModel.bibleSource = BibleSource(book: source.book, chapter: source.chapter)
+                                    viewRouter.popToView("BibleView", atIndex: viewRouter.path.count)
+                                }
+                            }) {
+                                Text("\(source.book) \(source.chapter)")
+                                    .foregroundColor(Color.blue)
+                                    .font(.system(size: 12))
+                            }
+
+                             Button(action: {
+                                 removeBibleSource(deletedSource: source)
                              }) {
                                  Image(systemName: "delete.left")
                                      .foregroundColor(.red)
@@ -218,21 +251,35 @@ struct ComposeWord: View {
 
     }
     
-    private func addUrl() {
-        print("current sources:", sources as Any)
+    public func addBibleSource() {
+        print("current bible sources:", bibleSources as Any)
+        let newSource = UserBibleSource(book: book, chapter: Int(chapter)!)
+
+        if bibleSources.isEmpty {
+            bibleSources = [newSource]
+        } else {
+            bibleSources.append(newSource)
+        }
+        
+        book = ""
+        chapter = ""
+    }
+    
+    public func addUrl() {
+        print("current urlSource:", urlSources as Any)
         
         testLink(sourceUrl) { result in
             switch result {
                 case .success(let validLink):
                     if validLink {
-                        let newSource = UserSources(url: sourceUrl, title: title, _key: UUID().uuidString)
-                        
-                        if sources.isEmpty {
-                            sources = [newSource]
+                        let newSource = UserUrlSource(url: sourceUrl, title: title, _key: UUID().uuidString)
+
+                        if urlSources.isEmpty {
+                            urlSources = [newSource]
                         } else {
-                            sources.append(newSource)
+                            urlSources.append(newSource)
                         }
-                        
+
                         sourceUrl = ""
                         title = ""
                         invalidLink = nil
@@ -245,19 +292,24 @@ struct ComposeWord: View {
             }
         }
     }
-
     
-    private func removeUrl(deletedSource: UserSources) {
-        if let index = sources.firstIndex(of: deletedSource) {
-            sources.remove(at: index)
+    public func removeBibleSource(deletedSource: UserBibleSource) {
+        if let index = bibleSources.firstIndex(of: deletedSource) {
+            bibleSources.remove(at: index)
             
-            // Remove the URL from invalidLinks if it exists
-//            if let invalidIndex = invalidLinks.firstIndex(of: deletedSource.url) {
-//                invalidLinks.remove(at: invalidIndex)
-//            }
         }
     }
-
+    
+    public func removeUrl(deletedSource: UserUrlSource) {
+        if let index = urlSources.firstIndex(of: deletedSource) {
+            urlSources.remove(at: index)
+            
+         //    Remove the URL from invalidLinks if it exists
+            if let invalidIndex = invalidLinks.firstIndex(of: deletedSource.url) {
+                invalidLinks.remove(at: invalidIndex)
+            }
+        }
+    }
 
     private func testLink(_ urlString: String?, completion: @escaping (Result<Bool, Error>) -> Void) {
         guard let urlString = urlString, let url = URL(string: urlString) else {
@@ -338,7 +390,8 @@ struct ComposeWord: View {
             let word: [String: Any] = [
                 "_type": "word",
                 "text": text,
-                "userSources": sources,
+                "urlSources": urlSources,
+                "bibleSources": bibleSources,
                 "onlyWords": onlyWords,
                 "isWordReliable": [
                     "reliability": isWordReliable.reliability,

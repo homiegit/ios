@@ -43,6 +43,9 @@ struct ProfileView: View {
     @State private var showSettings: Bool = false
     @State private var userId: String = ""
     
+    @State var videoSize: Double = 1
+    @State var videoPositionY: CGFloat = screenHeight / 1.2
+    
     init(secondsWatched: Binding<Int> = .constant(0)) {
         self._secondsWatched = secondsWatched
     }
@@ -104,7 +107,7 @@ struct ProfileView: View {
                     VStack {
                         if userId == UserDefaults.userProfile?._id {
                             Button(action: {
-                                viewRouter.popToView("SettingsView", atIndex: 1)
+                                viewRouter.popToView("SettingsView", atIndex: viewRouter.path.count)
                             }) {
                                 Image(systemName: "gear")
                                     .font(.system(size: 25))
@@ -324,28 +327,30 @@ struct ProfileView: View {
     @ViewBuilder
     private func contentForVideo(at index: Int, path: [String]) -> some View {
         if let video = viewModel.singleProfileUserData?.videos[index], let userData =  viewModel.singleProfileUserData {
-//            VideoPlayerView(
-//                video: video,
-//                user: userData.user,
-//                isPlaying: Binding(
-//                    get: {
-//                        viewModel.singleProfileCurrentIndex == index
-//                    },
-//                    set: { newValue in
-//                        print("new viewModel.currentIndex Value:", newValue)
-//                        updateIsPlayingArray(at: index, newValue: newValue)
-//                        DispatchQueue.main.async {
-//                            viewModel.singleProfileCurrentIndex = newValue ? index : nil
-//                        }
-//                    }
-//                ),
-//                currentLoopControl: $currentLoopControl,
-//                isMuted: $viewModel.isMuted,
-//                showHeader: $showHeader,
-//                currentIndex: $viewModel.singleProfileCurrentIndex
-//            )
-//            .environmentObject(viewModel)
-//            .environmentObject(viewRouter)
+            VideoPlayerView(
+                video: video,
+                user: userData.user,
+                isPlaying: Binding(
+                    get: {
+                        viewModel.singleProfileCurrentIndex == index
+                    },
+                    set: { newValue in
+                        print("new viewModel.currentIndex Value:", newValue)
+                        updateIsPlayingArray(at: index, newValue: newValue)
+                        DispatchQueue.main.async {
+                            viewModel.singleProfileCurrentIndex = newValue ? index : viewModel.singleProfileCurrentIndex
+                        }
+                    }
+                ),
+                currentLoopControl: $currentLoopControl,
+                isMuted: $viewModel.isMuted,
+                showHeader: $showHeader,
+                currentIndex: $viewModel.singleProfileCurrentIndex,
+                videoSize: $videoSize,
+                videoPositionY: $videoPositionY
+            )
+            .environmentObject(viewModel)
+            .environmentObject(viewRouter)
         }
     }
 

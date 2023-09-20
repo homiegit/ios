@@ -3,17 +3,21 @@ import Foundation
 
 struct Proof: Codable {
     let text: String?
-    let sources: [Source]?
+    let sources: [UserBibleSource]?
     let flag: String?
 }
 
-
-struct Source: Codable, Hashable {
-    let url: URL
-    let title: String
+struct BibleSource: Codable, Hashable {
+    var book: String
+    var chapter: Int
 }
 
-struct UserSources: Codable, Hashable {
+struct UserBibleSource: Codable, Hashable {
+    var book: String
+    var chapter: Int
+}
+
+struct UserUrlSource: Codable, Hashable {
     var url: String
     var title: String
     var _key: String
@@ -25,7 +29,7 @@ struct UserSources: Codable, Hashable {
     }
     
     // Implement the == operator
-    static func ==(lhs: UserSources, rhs: UserSources) -> Bool {
+    static func ==(lhs: UserUrlSource, rhs: UserUrlSource) -> Bool {
         return lhs.url == rhs.url && lhs.title == rhs.title
     }
 }
@@ -67,7 +71,8 @@ struct Video: Codable {
     let isFeatured: Bool?
     let videoUrl: URL?
     let caption: String?
-    let userSources: [UserSources]?
+    let urlSources: [UserUrlSource]?
+    let bibleSources: [UserBibleSource]?
     let selectedTopics: [String]?
     let typeOfContent: [String]?
     let transcriptionResults: String?
@@ -157,7 +162,9 @@ struct Word: Codable {
     let isWordReliable: IsWordReliable?
     let selectedTopics: [String]?
     let wordId: String?
-    let userSources: [UserSources]?
+    let urlSources: [UserUrlSource]?
+    let bibleSources: [UserBibleSource]?
+
     let _id: String?
     let isFeatured: Bool?
     let _createdAt: String?
@@ -186,6 +193,12 @@ struct IComment: Codable {
     let postedBy: PostedBy
     let likes: [Like]?
     let dislikes: [Dislike]?
+}
+
+struct Report: Codable {
+    let postedBy: String
+    let videoId: String
+    let text: String
 }
 
 //

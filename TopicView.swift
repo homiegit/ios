@@ -1,13 +1,15 @@
 import SwiftUI
 
 struct TopicData: Codable {
-    var video: [Video]
-    var word: [Word]
-    var user: [IUser]
+    var videos: [Video]
+    var words: [Word]
+    var users: [IUser]
 }
 
 struct TopicView: View {
     @EnvironmentObject var viewRouter: ViewRouter
+    @EnvironmentObject var viewModel: ContentViewModel
+
     @EnvironmentObject var topicsViewModel: TopicsViewModel
     //let topic: String
 
@@ -23,9 +25,13 @@ struct TopicView: View {
     @State private var currentLoopControl: String = "loop"
     @State private var isMuted: Bool = true
     @State private var showHeader: Bool = true
-    @State private var currentIndex: Int? = nil
+    @State private var currentIndex: Int = 0
     @Binding var secondsWatched: Int
     @Binding var viewAddedAlready: Bool
+    
+    @State var videoSize: Double = 1
+    @State var videoPositionY: CGFloat = screenHeight / 1.2
+
     
     init(secondsWatched: Binding<Int> = .constant(0), viewAddedAlready: Binding<Bool> = .constant(false)) {
         _secondsWatched = secondsWatched
@@ -42,26 +48,40 @@ struct TopicView: View {
                 ScrollView(.horizontal) {
                     HStack {
                         if let topicData = topicData {
-                            ForEach(topicData.video.indices, id: \.self) {index in
-//                                Button(action: {
-//                                    viewRouter.popToView("SingleVideoView", atIndex: 2)
-//                                }) {
-//                                    EmptyView()
-//                                    VideoPlayerView(
-//                                        video: topicData.video[index],
-//                                        user: topicData.user[index],
-//                                        isPlaying: $isPlaying,
-//                                        currentLoopControl: $currentLoopControl,
-//                                        isMuted: $isMuted,
-//                                        showHeader: $showHeader,
-//                                        currentIndex: $currentIndex
-//                                        //secondsWatched: $secondsWatched,
-//                                    )
-//                                    .frame(width: UIScreen.main.bounds.width / 3, height: UIScreen.main.bounds.height / 3)
-////                                    .onDisappear{
-////                                        UpdateViewAndSecondsWatched().updateViewAndSecondsWatched(videoId: <#T##String#>, secondsWatched: <#T##Int#>, isViewAddedAlready: <#T##Bool#>, completion: <#T##(Result<Data, Error>) -> Void#>)
-////                                    }
-//                                }
+                            ForEach(topicData.videos.indices, id: \.self) {index in
+                                Button(action: {
+                                    UserFromRef().fetchUser(_ref: topicData.videos[index].postedBy._ref) { result in
+                                        DispatchQueue.main.async {
+                                            switch result {
+                                            case .success(let user):
+                                                viewModel.singleVideo = topicData.videos[index]
+                                                viewModel.singleVideoUser = user
+                                                viewRouter.popToView("SingleVideoView", atIndex: viewRouter.path.count)
+                                            case .failure(let error):
+                                                // Handle the error here if needed
+                                                print("Error fetching user: \(error)")
+                                            }
+                                        }
+                                    }
+                                }) {
+                                    EmptyView()
+                                    VideoPlayerView(
+                                        video: topicData.videos[index],
+                                        user: topicData.users[index],
+                                        isPlaying: $isPlaying,
+                                        currentLoopControl: $currentLoopControl,
+                                        isMuted: $isMuted,
+                                        showHeader: $showHeader,
+                                        currentIndex: $currentIndex,
+                                        videoSize: $videoSize,
+                                        videoPositionY: $videoPositionY
+                                        //secondsWatched: $secondsWatched,
+                                    )
+                                    .frame(width: UIScreen.main.bounds.width / 3, height: UIScreen.main.bounds.height / 3)
+//                                    .onDisappear{
+//                                        UpdateViewAndSecondsWatched().updateViewAndSecondsWatched(videoId: <#T##String#>, secondsWatched: <#T##Int#>, isViewAddedAlready: <#T##Bool#>, completion: <#T##(Result<Data, Error>) -> Void#>)
+//                                    }
+                                }
                             }
                         }
                     }

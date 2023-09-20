@@ -265,4 +265,56 @@ class ProfileData {
     }
 }
 
+class UserFromRef {
+    func fetchUser(_ref: String, completion: @escaping (Result<IUser, Error>) -> Void) {
+        guard let serverIpUrlString = ProcessInfo.processInfo.environment["serverIpUrl"],
+              let fetchUserEndpoint = URL(string: serverIpUrlString)?.appendingPathComponent("/api/fetchUser") else {
+            print("Error: Invalid server URL or endpoint")
+            return
+        }
+        print("fetchUserEndpoint:", fetchUserEndpoint)
+        
+        let requestData: [String: Any] = ["_ref": _ref]
+        print("Request JSON Data:", requestData)
 
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: requestData) else {
+            print("Error encoding JSON data")
+            return
+        }
+        
+        let jsonString = String(data: jsonData, encoding: .utf8)
+        print("Request JSON Data:", jsonString ?? "")
+
+
+        var request = URLRequest(url: fetchUserEndpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = jsonData
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Error: \(error)")
+                return
+            }
+
+            guard let data = data else {
+                print("No data received")
+                return
+            }
+            
+            print("Raw Server Response (JSON):", data)
+
+
+            do {
+                let decoder = JSONDecoder()
+                let user = try decoder.decode(IUser.self, from: data)
+                print("user from fetchuser:", user)
+
+                completion(.success(user))
+
+            } catch {
+                print("Error decoding JSON:", error)
+            }
+        }.resume()
+    }
+}

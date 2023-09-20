@@ -149,30 +149,132 @@ struct SignInView: View {
                     if showingSignIn {
                         VStack(spacing: 15) {
                             if signInWithUserName {
-                                TextField("User Name", text: $signInUserName)
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(Color.gray.opacity(0.5))
-                                    .cornerRadius(8)
-                                
-                                SecureField("Password", text: $signInPassword)
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(Color.gray.opacity(0.5))
-                                    .cornerRadius(8)
+                                ZStack {
+                                    if signInUserName.isEmpty {
+                                        Text("User Name")
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 8)
+                                            .offset(y: 0)
+                                    }
+                                    
+                                    TextField("", text: $signInUserName)
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .background(Color.gray.opacity(0.5))
+                                        .cornerRadius(8)
+                                }
+                                ZStack{
+                                    if signInPassword.isEmpty {
+                                        Text("Password")
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 8)
+                                            .offset(y: 0)
+                                    }
+                                    if hidePassword {
+                                        SecureField("", text: $signInPassword)
+                                            .foregroundColor(.white)
+                                            .padding()
+                                            .background(Color.gray.opacity(0.5))
+                                            .cornerRadius(8)
+                                            .overlay{
+                                                HStack{
+                                                    Spacer()
+                                                    Button(action: {
+                                                        hidePassword = false
+                                                    }) {
+                                                        Image(systemName: "eye.slash.circle.fill")
+                                                            .font(.system(size: 30))
+                                                            .foregroundColor(.white)
+                                                    }
+                                                }
+                                                .padding(5)
+                                            }
+                                    } else {
+                                        
+                                        TextField("", text: $signInPassword)
+                                            .foregroundColor(.white)
+                                            .padding()
+                                            .background(Color.gray.opacity(0.5))
+                                            .cornerRadius(8)
+                                            .overlay{
+                                                HStack{
+                                                    Spacer()
+                                                    Button(action: {
+                                                        hidePassword = true
+                                                    }) {
+                                                        Image(systemName: "eye.circle.fill")
+                                                            .font(.system(size: 30))
+                                                            .foregroundColor(.white)
+                                                    }
+                                                }
+                                                .padding(5)
+                                            }
+                                    }
+                                }
                             }
                             if signInWithEmail {
-                                TextField("Email", text: $signInEmail)
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(Color.gray.opacity(0.5))
-                                    .cornerRadius(8)
-                                
-                                SecureField("Password", text: $signInPassword)
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(Color.gray.opacity(0.5))
-                                    .cornerRadius(8)
+                                ZStack(alignment: .leading) {
+                                    if signInEmail.isEmpty {
+                                        Text("Email")
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 8)
+                                            .offset(y: 0)
+                                    }
+                                    
+                                    TextField("", text: $signInEmail)
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .background(Color.gray.opacity(0.5))
+                                        .cornerRadius(8)
+                                }
+                                ZStack{
+                                    if signInPassword.isEmpty {
+                                        Text("Password")
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 8)
+                                            .offset(y: 0)
+                                    }
+                                    if hidePassword {
+                                        SecureField("", text: $signInPassword)
+                                            .foregroundColor(.white)
+                                            .padding()
+                                            .background(Color.gray.opacity(0.5))
+                                            .cornerRadius(8)
+                                            .overlay{
+                                                HStack{
+                                                    Spacer()
+                                                    Button(action: {
+                                                        hidePassword = false
+                                                    }) {
+                                                        Image(systemName: "eye.slash.circle.fill")
+                                                            .font(.system(size: 30))
+                                                            .foregroundColor(.white)
+                                                    }
+                                                }
+                                                .padding(5)
+                                            }
+                                    } else {
+                                        
+                                        TextField("", text: $signInPassword)
+                                            .foregroundColor(.white)
+                                            .padding()
+                                            .background(Color.gray.opacity(0.5))
+                                            .cornerRadius(8)
+                                            .overlay{
+                                                HStack{
+                                                    Spacer()
+                                                    Button(action: {
+                                                        hidePassword = true
+                                                    }) {
+                                                        Image(systemName: "eye.circle.fill")
+                                                            .font(.system(size: 30))
+                                                            .foregroundColor(.white)
+                                                    }
+                                                }
+                                                .padding(5)
+                                            }
+                                    }
+                                }
                             }
                             
                             Button(action: {
@@ -182,7 +284,7 @@ struct SignInView: View {
                                         case .success:
                                             if viewRouter.path.contains("Upload") {
                                                 viewRouter.path.removeAll()
-                                                viewRouter.popToView("UploadView", atIndex: 0)
+                                                viewRouter.popToView("UploadView", atIndex: viewRouter.path.count)
                                             } else {
                                                 viewRouter.popToContentView()
                                             }
@@ -220,29 +322,95 @@ struct SignInView: View {
                     if showingSignUp {
                         // Sign-Up View
                         VStack(spacing: 15) {
-                            TextField("User Name", text: $signUpUserName)
-                                .foregroundColor(.white)
-                                .padding()
-                                .background(Color.gray.opacity(0.5))
-                                .cornerRadius(8)
+                            ZStack{
+                                if signUpUserName.isEmpty{
+                                    Text("User Name")
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 8)
+                                        .offset(y: 0)
+                                }
+                                TextField("", text: $signUpUserName)
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .background(Color.gray.opacity(0.5))
+                                    .cornerRadius(8)
+                            }
+                            ZStack{
+                                if signUpEmail.isEmpty{
+                                    Text("Email")
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 8)
+                                        .offset(y: 0)
+                                }
+                                TextField("", text: $signUpEmail)
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .background(Color.gray.opacity(0.5))
+                                    .cornerRadius(8)
+                            }
                             
-                            TextField("Email", text: $signUpEmail)
-                                .foregroundColor(.white)
-                                .padding()
-                                .background(Color.gray.opacity(0.5))
-                                .cornerRadius(8)
+                            ZStack{
+                                if signUpPhoneNumber.isEmpty{
+                                    Text("Phone Number")
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 8)
+                                        .offset(y: 0)
+                                }
+                                TextField("", text: $signUpPhoneNumber)
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .background(Color.gray.opacity(0.5))
+                                    .cornerRadius(8)
+                            }
                             
-                            TextField("Phone Number", text: $signUpPhoneNumber)
-                                .foregroundColor(.white)
-                                .padding()
-                                .background(Color.gray.opacity(0.5))
-                                .cornerRadius(8)
-                            
-                            SecureField("Password", text: $signUpPassword)
-                                .foregroundColor(.white)
-                                .padding()
-                                .background(Color.gray.opacity(0.5))
-                                .cornerRadius(8)
+                            ZStack{
+                                if signUpPassword.isEmpty {
+                                    Text("Password")
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 8)
+                                        .offset(y: 0)
+                                }
+                                if hidePassword {
+                                    SecureField("", text: $signUpPassword)
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .background(Color.gray.opacity(0.5))
+                                        .cornerRadius(8)
+                                        .overlay{
+                                            HStack{
+                                                Spacer()
+                                                Button(action: {
+                                                    hidePassword = false
+                                                }) {
+                                                    Image(systemName: "eye.slash.circle.fill")
+                                                        .font(.system(size: 30))
+                                                        .foregroundColor(.white)
+                                                }
+                                            }
+                                            .padding(5)
+                                        }
+                                } else {
+                                    
+                                    TextField("", text: $signUpPassword)
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .background(Color.gray.opacity(0.5))
+                                        .cornerRadius(8)
+                                        .overlay{
+                                            HStack{
+                                                Spacer()
+                                                Button(action: {
+                                                    hidePassword = true
+                                                }) {
+                                                    Image(systemName: "eye.circle.fill")
+                                                        .font(.system(size: 30))
+                                                        .foregroundColor(.white)
+                                                }
+                                            }
+                                            .padding(5)
+                                        }
+                                }
+                            }
                             Button(action: {
                                 Task {
                                     await createUser()
